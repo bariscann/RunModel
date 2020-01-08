@@ -1,4 +1,19 @@
 <resources>
     <string name="app_name">RunModel</string>
     <string name="action_settings">Settings</string>
+    <string name="algorithms_prompt">Choose a algorithm</string>
+
+    <string-array name="algorithms_arrays">
+        <item>Random Forest</item>
+        <item>J48</item>
+    </string-array>
+
+    <string name="fnames_prompt">Choose a file name</string>
+
+    <string-array name="fnames_arrays">
+        <item>train_0.arff</item>
+        <item>train_25.arff</item>
+        <item>train_50.arff</item>
+        <item>train_75.arff</item>
+    </string-array>
 </resources>

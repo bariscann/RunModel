@@ -13,26 +13,41 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
+//    private String TAG = "MainActivity";
     private TextView textView;
+    private EditText editBox;
+    private Spinner algSpinner;
+    private Spinner fileNameSpinner;
 
     private String EXTERNAL_STORAGE_DIRECTORY = Environment.getExternalStorageDirectory().toString() + "/";
-    private String APPLICATION_FOLDER = EXTERNAL_STORAGE_DIRECTORY + "TransportModeDetection/";
+    private String APPLICATION_FOLDER = EXTERNAL_STORAGE_DIRECTORY + "RunModel/";
     private String REQUIRED_FOLDER = APPLICATION_FOLDER + "Required/";
 
     private static String TAG = "MainActivity";
-    private String TRAIN_DATASET = REQUIRED_FOLDER + "train.arff";
+    //private String TRAIN_DATASET = REQUIRED_FOLDER + "train.arff";
     private String TEST_DATASET = REQUIRED_FOLDER + "test.arff";
 
     private Data trainModel;
     private Data testModel;
 
     private Model rfModel;
+
+    private int numIteration;
+
+    private String trainFileNames[] = {
+            "train_0.arff",
+            "train_25.arff",
+            "train_50.arff",
+            "train_75.arff"
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,10 +56,17 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        this.numIteration = 17280;
+
         this.textView  = (TextView) findViewById(R.id.logTextView);
         this.textView.setText("Activity starting");
 
+        this.editBox = (EditText) findViewById(R.id.numIterationEditText);
+        this.editBox.setText(Integer.toString(this.numIteration));
 
+
+        this.algSpinner = (Spinner) findViewById(R.id.spinnerAlgorithm);
+        this.fileNameSpinner = (Spinner) findViewById(R.id.spinnerFileName);
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -89,38 +111,82 @@ public class MainActivity extends AppCompatActivity {
     }*/
 
     public void trainButton(View view) {
+        int selectedAlg = this.algSpinner.getSelectedItemPosition();
+        int selectionFname = this.fileNameSpinner.getSelectedItemPosition();
         view.setClickable(false);
+        this.algSpinner.setEnabled(false);
+        this.fileNameSpinner.setEnabled(false);
+
         this.trainModel = null;
+
         try {
-            this.trainModel = new Data(TRAIN_DATASET, 0.6);
+            this.trainModel = new Data(REQUIRED_FOLDER + this.trainFileNames[selectionFname], 0.6);
             this.trainModel.loadData();
 //            Toast.makeText(this, "Number of instance: " + this.trainModel.numAllInstances(), Toast.LENGTH_SHORT).show();
             this.textView.setText("Number of instance: " + this.trainModel.numAllInstances());
 
             this.rfModel = new Model(this.trainModel.getAllData());
-            this.rfModel.fitRF();
+            if (0 == selectedAlg)
+            {
+                Log.d(TAG, "Random Forest started..");
+                this.rfModel.fitRF();
+                Log.d(TAG, "Random Forest done..");
+            }
+            else
+            {
+                Log.d(TAG, "J48 started..");
+                this.rfModel.fitJ48();
+                Log.d(TAG, "J48 done..");
+            }
+
 //            Toast.makeText(this, "FIT Number of instance: " + this.trainModel.numAllInstances(), Toast.LENGTH_SHORT).show();
             this.textView.setText("FIT Number of instance: " + this.trainModel.numAllInstances());
+            view.setClickable(true);
+            this.algSpinner.setEnabled(true);
+            this.fileNameSpinner.setEnabled(true);
         } catch (IOException e) {
-            Toast.makeText(this, "Hata", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Hata " + this.algSpinner.getSelectedItemPosition(), Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, " EXCEPTION Hata", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, " EXCEPTION Hata " + String.valueOf(this.algSpinner.getSelectedItem()), Toast.LENGTH_SHORT).show();
         }
     }
 
 
     public void testButton(View view) {
-//        view.setClickable(false);
+        int i;
+        int selectedAlg = this.algSpinner.getSelectedItemPosition();
+        view.setClickable(false);
         this.testModel = null;
+        this.numIteration = Integer.parseInt(this.editBox.getText().toString());
+        this.textView.setText("Iteration count is " + this.numIteration);
+//        this.textView.setText(this.rfModel.getSummary());
         try {
             this.testModel = new Data(TEST_DATASET, 0.4);
             this.testModel.loadData();
 
-            this.rfModel.evaluateRF(this.testModel.getAllData());
-//            Toast.makeText(this, this.rfModel.getSummary(), Toast.LENGTH_LONG).show();
-            this.textView.setText(this.rfModel.getSummary());
+            if (0 == selectedAlg)
+            {
+                for (i = 0; i < this.numIteration; i++) {
+                    this.rfModel.evaluateRF(this.testModel.getAllData());
+                }
+            }
+            else
+            {
+                for (i = 0; i < this.numIteration; i++) {
+                    this.rfModel.evaluateJ48(this.testModel.getAllData());
+                }
+            }
+
+
+            this.textView.setText("Iteration count is " + this.numIteration + " is done. \n\n" + this.rfModel.getSummary());
+            Toast.makeText(this, this.rfModel.getSummary(), Toast.LENGTH_LONG).show();
+            view.setClickable(true);
+
+            this.algSpinner.setEnabled(true);
+            this.fileNameSpinner.setEnabled(true);
+
         } catch (IOException e) {
             Toast.makeText(this, "Hata", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
