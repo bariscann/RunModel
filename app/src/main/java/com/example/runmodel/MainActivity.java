@@ -18,10 +18,17 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 //    private String TAG = "MainActivity";
+
+    private SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+
     private TextView textView;
     private EditText editBox;
     private Spinner algSpinner;
@@ -34,6 +41,11 @@ public class MainActivity extends AppCompatActivity {
     private static String TAG = "MainActivity";
     //private String TRAIN_DATASET = REQUIRED_FOLDER + "train.arff";
     private String TEST_DATASET = REQUIRED_FOLDER + "test.arff";
+
+    private String LOG_FILENAME = APPLICATION_FOLDER + "log.txt";
+
+    private FileWriter logFileWriter;
+    private String logMessage;
 
     private Data trainModel;
     private Data testModel;
@@ -56,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        this.numIteration = 17280;
+        this.numIteration = 100;
 
         this.textView  = (TextView) findViewById(R.id.logTextView);
         this.textView.setText("Activity starting");
@@ -67,6 +79,13 @@ public class MainActivity extends AppCompatActivity {
 
         this.algSpinner = (Spinner) findViewById(R.id.spinnerAlgorithm);
         this.fileNameSpinner = (Spinner) findViewById(R.id.spinnerFileName);
+
+        try {
+            this.logFileWriter = new FileWriter(new File(LOG_FILENAME), true);
+            this.logMessage = "";
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -117,8 +136,13 @@ public class MainActivity extends AppCompatActivity {
         this.algSpinner.setEnabled(false);
         this.fileNameSpinner.setEnabled(false);
 
+
         this.trainModel = null;
 
+        this.logMessage = "";
+        this.logMessage += "===========================\n";
+        this.logMessage += "train file name: " + this.trainFileNames[selectionFname] + "\n";
+        this.logMessage += "train start: " + formatter.format(new Date()) + "\n";
         try {
             this.trainModel = new Data(REQUIRED_FOLDER + this.trainFileNames[selectionFname], 0.6);
             this.trainModel.loadData();
@@ -128,17 +152,19 @@ public class MainActivity extends AppCompatActivity {
             this.rfModel = new Model(this.trainModel.getAllData());
             if (0 == selectedAlg)
             {
+                this.logMessage += "Algorithm name: knn\n";
                 Log.d(TAG, "Random Forest started..");
                 this.rfModel.fitRF();
                 Log.d(TAG, "Random Forest done..");
             }
             else
             {
+                this.logMessage += "Algorithm name: j48\n";
                 Log.d(TAG, "J48 started..");
                 this.rfModel.fitJ48();
                 Log.d(TAG, "J48 done..");
             }
-
+            this.logMessage += "train end: " + formatter.format(new Date()) + "\n";
 //            Toast.makeText(this, "FIT Number of instance: " + this.trainModel.numAllInstances(), Toast.LENGTH_SHORT).show();
             this.textView.setText("FIT Number of instance: " + this.trainModel.numAllInstances());
             view.setClickable(true);
@@ -156,29 +182,51 @@ public class MainActivity extends AppCompatActivity {
 
     public void testButton(View view) {
         int i;
+        long startTime, stopTime;
         int selectedAlg = this.algSpinner.getSelectedItemPosition();
         view.setClickable(false);
         this.testModel = null;
         this.numIteration = Integer.parseInt(this.editBox.getText().toString());
         this.textView.setText("Iteration count is " + this.numIteration);
+
+        this.logMessage += "test num iteration: " + this.numIteration + "\n";
 //        this.textView.setText(this.rfModel.getSummary());
         try {
             this.testModel = new Data(TEST_DATASET, 0.4);
             this.testModel.loadData();
 
+            this.logMessage += "test start: " + formatter.format(new Date()) + "\n";
             if (0 == selectedAlg)
             {
+                this.logMessage += "test algorithm: knn\n";
+                startTime = new Date().getTime();
                 for (i = 0; i < this.numIteration; i++) {
                     this.rfModel.evaluateRF(this.testModel.getAllData());
                 }
+                stopTime = new Date().getTime();
             }
             else
             {
+                this.logMessage += "test algorithm: j48\n";
+                startTime = new Date().getTime();
                 for (i = 0; i < this.numIteration; i++) {
                     this.rfModel.evaluateJ48(this.testModel.getAllData());
                 }
+                stopTime = new Date().getTime();
             }
 
+            this.logMessage += "test end: " + formatter.format(new Date()) + "\n";
+
+            this.logMessage += "test elapsed time: " + (stopTime - startTime) + "\n";
+
+            try {
+                this.logFileWriter = new FileWriter(new File(LOG_FILENAME), true);
+                this.logFileWriter.write(logMessage);
+                this.logMessage = "";
+                this.logFileWriter.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
             this.textView.setText("Iteration count is " + this.numIteration + " is done. \n\n" + this.rfModel.getSummary());
             Toast.makeText(this, this.rfModel.getSummary(), Toast.LENGTH_LONG).show();

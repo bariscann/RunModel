@@ -4,7 +4,7 @@
     <string name="algorithms_prompt">Choose a algorithm</string>
 
     <string-array name="algorithms_arrays">
-        <item>Random Forest</item>
+        <item>kNN</item>
         <item>J48</item>
     </string-array>
 
